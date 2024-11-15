@@ -1,6 +1,7 @@
 export type QueryComponents = {
   player: {
     name: string;
+    id: string;
   } | null;
   statistic: {
     category: string;
