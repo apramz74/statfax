@@ -1,68 +1,40 @@
 "use client";
 import { useState } from "react";
-
-// Types for our parsed query
-type StatCondition = {
-  comparison: "over" | "under" | "exactly" | "average";
-  value?: number;
-};
-
-type ParsedQuery = {
-  player?: string;
-  statType?: string;
-  condition?: StatCondition;
-  timeframe?: string;
-};
+import { QueryComponents } from "./types";
+import { LoadingSpinner } from "./components/LoadingSpinner";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [queryBreakdown, setQueryBreakdown] = useState<ParsedQuery | null>(
+  const [queryBreakdown, setQueryBreakdown] = useState<QueryComponents | null>(
     null
   );
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Basic parser function - we'll replace this with NLP later
-  const parseQuery = (query: string): ParsedQuery => {
-    // This is a very basic parser for demonstration
-    const words = query.toLowerCase().split(" ");
-    const parsed: ParsedQuery = {};
-
-    // Look for common patterns
-    if (words.includes("over")) {
-      const index = words.indexOf("over");
-      parsed.condition = {
-        comparison: "over",
-        value: Number(words[index + 1]),
-      };
-    }
-
-    // Look for player names (very basic - will need improvement)
-    const playerIndex = words.findIndex(
-      (word) => word === "has" || word === "did" || word === "does"
-    );
-    if (playerIndex > 0) {
-      parsed.player = words
-        .slice(0, playerIndex)
-        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(" ");
-    }
-
-    // Look for stat types
-    const statTypes = [
-      "points",
-      "rebounds",
-      "assists",
-      "three-pointers",
-      "threes",
-    ];
-    parsed.statType = statTypes.find((stat) => words.includes(stat));
-
-    return parsed;
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    const breakdown = parseQuery(searchQuery);
-    setQueryBreakdown(breakdown);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/parse-query", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: searchQuery }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to parse query");
+      }
+
+      const { parsedQuery } = await response.json();
+      setQueryBreakdown(parsedQuery);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "An error occurred");
+      setQueryBreakdown(null);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -109,12 +81,28 @@ export default function Home() {
               <button
                 className="absolute right-3 top-1/2 -translate-y-1/2 
                              bg-blue-500 hover:bg-blue-600 text-white rounded-full 
-                             px-6 py-2 text-sm font-medium transition-colors"
+                             px-6 py-2 text-sm font-medium transition-colors
+                             disabled:bg-blue-300"
+                disabled={isLoading}
               >
-                Search
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <LoadingSpinner />
+                    Parsing...
+                  </span>
+                ) : (
+                  "Search"
+                )}
               </button>
             </form>
           </div>
+
+          {/* Error Display */}
+          {error && (
+            <div className="mt-4 p-4 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-lg text-sm">
+              {error}
+            </div>
+          )}
 
           {/* Query Breakdown Section */}
           <div className="mt-12 p-6 border border-gray-200 dark:border-gray-800 rounded-lg">
@@ -126,37 +114,30 @@ export default function Home() {
             ) : (
               <div className="flex flex-wrap items-center gap-3">
                 {queryBreakdown.player && (
-                  <div className="flex items-center">
-                    <span className="px-4 py-2 bg-blue-100 dark:bg-blue-900 rounded-full text-sm font-medium">
-                      Player: {queryBreakdown.player}
-                    </span>
-                  </div>
+                  <span className="px-4 py-2 bg-blue-100 dark:bg-blue-900 rounded-full text-sm font-medium">
+                    Player: {queryBreakdown.player.name}
+                  </span>
                 )}
-                {queryBreakdown.statType && (
-                  <div className="flex items-center">
-                    <span className="px-4 py-2 bg-green-100 dark:bg-green-900 rounded-full text-sm font-medium">
-                      Stat: {queryBreakdown.statType}
-                    </span>
-                  </div>
+                {queryBreakdown.statistic && (
+                  <span className="px-4 py-2 bg-green-100 dark:bg-green-900 rounded-full text-sm font-medium">
+                    Stat: {queryBreakdown.statistic.category}
+                    {queryBreakdown.statistic.subcategory &&
+                      ` (${queryBreakdown.statistic.subcategory})`}
+                  </span>
                 )}
                 {queryBreakdown.condition && (
-                  <div className="flex items-center">
-                    <span className="px-4 py-2 bg-purple-100 dark:bg-purple-900 rounded-full text-sm font-medium">
-                      Condition: {queryBreakdown.condition.comparison}{" "}
-                      {queryBreakdown.condition.value}
-                    </span>
-                  </div>
+                  <span className="px-4 py-2 bg-purple-100 dark:bg-purple-900 rounded-full text-sm font-medium">
+                    {queryBreakdown.condition.operator}{" "}
+                    {queryBreakdown.condition.threshold}
+                  </span>
+                )}
+                {queryBreakdown.aggregation && (
+                  <span className="px-4 py-2 bg-orange-100 dark:bg-orange-900 rounded-full text-sm font-medium">
+                    {queryBreakdown.aggregation.type}
+                  </span>
                 )}
               </div>
             )}
-          </div>
-
-          {/* Results Section (Empty State) */}
-          <div className="mt-8 p-6 border border-gray-200 dark:border-gray-800 rounded-lg">
-            <h2 className="text-lg font-semibold mb-4">Results</h2>
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-              Your results will appear here
-            </p>
           </div>
         </div>
       </main>
