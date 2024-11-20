@@ -1,24 +1,20 @@
 export interface QueryComponents {
-  player: {
+  player?: {
     name: string;
-    id: string;
-    team?: string;
   };
-  statistic: {
+  statistic?: {
     category: string;
-    subcategory?: string;
-  };
-  condition?: {
-    operator: "over" | "under" | "exactly";
-    threshold: number;
   };
   timeframe?: {
-    type: "season" | "game" | "career";
-    value?: string;
+    value: string;
+  };
+  condition?: {
+    operator: string;
+    value: number;
   };
 }
 
-export interface PlayerGameStats {
+export interface PlayerStats {
   points: number;
   rebounds: number;
   assists: number;
@@ -30,7 +26,7 @@ export interface GameStats {
   date: string;
   homeTeam: string;
   awayTeam: string;
-  playerStats: PlayerGameStats;
+  playerStats: PlayerStats;
 }
 
 export interface QueryParams {
@@ -39,9 +35,8 @@ export interface QueryParams {
   endDate?: string;
 }
 
-// API Response types
 export interface NBAApiGameResponse {
-  response: {
+  response: Array<{
     id: string;
     date: string;
     teams: {
@@ -52,5 +47,5 @@ export interface NBAApiGameResponse {
     totReb: number;
     assists: number;
     tpm: number;
-  }[];
+  }>;
 }

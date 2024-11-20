@@ -17,7 +17,6 @@ export default function Home() {
     setError(null);
 
     try {
-      // First get parsed query
       const response = await fetch("/api/parse-query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -31,7 +30,6 @@ export default function Home() {
       const { parsedQuery } = await response.json();
       setQueryBreakdown(parsedQuery);
 
-      // Then fetch stats using the new API route
       const statsResponse = await fetch("/api/player-stats", {
         method: "POST",
         headers: { "Content-Type": "application/json" },

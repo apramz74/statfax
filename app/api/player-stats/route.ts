@@ -1,5 +1,10 @@
-import { createNBAApiClient } from "@/app/lib/nbaApi";
-import { QueryComponents } from "@/app/types";
+import { StatsService } from "@/app/lib/statsService";
+import { QueryComponents } from "@/app/types/index";
+import {
+  APIError,
+  PlayerNotFoundError,
+  APIRateLimitError,
+} from "@/app/lib/nbaApi";
 
 export async function POST(request: Request) {
   try {
@@ -7,29 +12,33 @@ export async function POST(request: Request) {
       parsedQuery: QueryComponents;
     };
 
-    if (!parsedQuery.player) {
+    if (!parsedQuery) {
       return Response.json(
-        { error: "Player information is required" },
+        { error: "Missing parsed query in request body" },
         { status: 400 }
       );
     }
 
-    const nbaClient = createNBAApiClient({
-      apiKey: process.env.NBA_API_KEY!,
-      baseUrl: process.env.NBA_API_BASE_URL!,
-    });
-
-    const gameStats = await nbaClient.getPlayerGameStats(
-      parsedQuery.player.id,
-      {}
-    );
+    const statsService = new StatsService();
+    const gameStats = await statsService.getStatsForQuery(parsedQuery);
 
     return Response.json({ gameStats });
   } catch (error) {
     console.error("Error fetching player stats:", error);
-    return Response.json(
-      { error: "Failed to fetch player stats" },
-      { status: 500 }
-    );
+
+    if (error instanceof PlayerNotFoundError) {
+      return Response.json({ error: error.message }, { status: 404 });
+    }
+    if (error instanceof APIRateLimitError) {
+      return Response.json(
+        { error: "API rate limit exceeded. Please try again later." },
+        { status: 429 }
+      );
+    }
+    if (error instanceof APIError) {
+      return Response.json({ error: error.message }, { status: 400 });
+    }
+
+    return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }
