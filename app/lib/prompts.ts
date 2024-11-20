@@ -29,6 +29,7 @@ Rules:
 - Infer aggregation type from context
 - Return null for any component that isn't specified
 - Only include timeframe/aggregation if explicitly mentioned or clearly implied
+- Season must always be in YYYY format. Never YYYY-YY.
 
 Examples:
 
@@ -44,7 +45,7 @@ Input: "What's LeBron's average points this season?"
 Output: {
   "player": { "name": "LeBron James" },
   "statistic": { "category": "points" },
-  "timeframe": { "type": "season", "value": "2023-24" },
+  "timeframe": { "type": "season", "value": "2024" },
   "aggregation": { "type": "average" }
 }
 

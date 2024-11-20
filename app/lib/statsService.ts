@@ -53,17 +53,17 @@ export class StatsService {
   private filterStatsByCondition(
     stats: GameStats[],
     category: string,
-    condition: { operator: string; value: number }
+    condition: { operator: string; threshold: number }
   ): GameStats[] {
     return stats.filter((game) => {
       const statValue = this.getStatValue(game.playerStats, category);
       switch (condition.operator) {
-        case "over":
-          return statValue > condition.value;
-        case "under":
-          return statValue < condition.value;
-        case "equal":
-          return statValue === condition.value;
+        case ">":
+          return statValue > condition.threshold;
+        case "<":
+          return statValue < condition.threshold;
+        case "=":
+          return statValue === condition.threshold;
         default:
           return true;
       }
@@ -140,7 +140,7 @@ export class StatsService {
 
       const queryParams = new URLSearchParams({
         id: playerId,
-        season: params.season || "2023",
+        season: params.season || "2024",
       });
 
       const endpoint = `/players/statistics?${queryParams.toString()}`;
@@ -192,7 +192,7 @@ export class StatsService {
 
   private buildQueryParams(query: QueryComponents): QueryParams {
     return {
-      season: query.timeframe?.value || "2023-24",
+      season: query.timeframe?.value || "2024",
     };
   }
 }
