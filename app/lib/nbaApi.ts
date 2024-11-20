@@ -1,4 +1,4 @@
-import { GameStats, QueryParams, NBAApiGameResponse } from "../types/index";
+import { NBAApiGameResponse } from "@/app/types/index";
 
 interface NBAApiConfig {
   apiKey: string;
@@ -27,52 +27,46 @@ export class PlayerNotFoundError extends APIError {
 }
 
 export const createNBAApiClient = (config: NBAApiConfig) => {
-  const makeRequest = async (endpoint: string): Promise<Response> => {
-    return fetch(`${config.baseUrl}${endpoint}`, {
-      headers: {
-        "X-RapidAPI-Key": config.apiKey,
-        "X-RapidAPI-Host": "api-nba-v1.p.rapidapi.com",
-      },
-    });
-  };
-
   return {
-    async getPlayerGameStats(
-      playerId: string,
-      params: QueryParams
-    ): Promise<GameStats[]> {
-      const queryParams = new URLSearchParams({
-        player_id: playerId,
-        season: params.season || "2023-24",
-        ...(params.startDate && { start_date: params.startDate }),
-        ...(params.endDate && { end_date: params.endDate }),
-      });
+    async getGame(gameId: string): Promise<NBAApiGameResponse> {
+      return this.get<NBAApiGameResponse>(`/games/${gameId}`);
+    },
 
-      const response = await makeRequest(
-        `/games/playerStats?${queryParams.toString()}`
-      );
+    async get<T>(endpoint: string): Promise<T> {
+      try {
+        const response = await fetch(`${config.baseUrl}${endpoint}`, {
+          method: "GET",
+          headers: {
+            "X-RapidAPI-Key": config.apiKey,
+            "X-RapidAPI-Host": "api-nba-v1.p.rapidapi.com",
+            "Content-Type": "application/json",
+          },
+        });
 
-      if (!response.ok) {
-        if (response.status === 429) throw new APIRateLimitError();
-        if (response.status === 404) throw new PlayerNotFoundError(playerId);
-        throw new APIError(`API request failed: ${response.statusText}`);
+        if (!response.ok) {
+          console.error("API Response:", {
+            status: response.status,
+            statusText: response.statusText,
+            url: response.url,
+          });
+
+          if (response.status === 403) {
+            throw new APIError(
+              "API authentication failed. Please check your API key."
+            );
+          }
+          if (response.status === 429) throw new APIRateLimitError();
+          if (response.status === 404) throw new PlayerNotFoundError("Unknown");
+
+          throw new APIError(`API request failed: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error("NBA API request failed:", error);
+        throw error;
       }
-
-      const data = (await response.json()) as NBAApiGameResponse;
-
-      // Transform API response to our GameStats format
-      return data.response.map((game) => ({
-        gameId: game.id,
-        date: game.date,
-        homeTeam: game.teams.home.name,
-        awayTeam: game.teams.away.name,
-        playerStats: {
-          points: game.points,
-          rebounds: game.totReb,
-          assists: game.assists,
-          threePointers: game.tpm,
-        },
-      }));
     },
   };
 };
