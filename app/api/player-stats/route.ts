@@ -1,3 +1,4 @@
+import { QueryAnalyzer } from "@/app/lib/queryAnalyzer";
 import { StatsService } from "@/app/lib/statsService";
 import { QueryComponents } from "@/app/types/index";
 import {
@@ -20,9 +21,12 @@ export async function POST(request: Request) {
     }
 
     const statsService = new StatsService();
-    const gameStats = await statsService.getStatsForQuery(parsedQuery);
+    const queryAnalyzer = new QueryAnalyzer();
 
-    return Response.json({ gameStats });
+    const stats = await statsService.getStatsForQuery(parsedQuery);
+    const analysis = queryAnalyzer.analyze(stats, parsedQuery);
+    console.log("Analysis:", analysis);
+    return Response.json(analysis);
   } catch (error) {
     console.error("Error fetching player stats:", error);
 

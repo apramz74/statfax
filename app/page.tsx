@@ -1,11 +1,14 @@
 "use client";
 import { useState } from "react";
-import { QueryComponents } from "./types";
+import { QueryComponents, AnalysisResult } from "@/app/types/index";
 import { LoadingSpinner } from "./components/LoadingSpinner";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const [queryBreakdown, setQueryBreakdown] = useState<QueryComponents | null>(
+    null
+  );
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(
     null
   );
   const [isLoading, setIsLoading] = useState(false);
@@ -37,11 +40,13 @@ export default function Home() {
       });
 
       if (!statsResponse.ok) {
-        throw new Error("Failed to fetch player stats");
+        const errorData = await statsResponse.json();
+        throw new Error(errorData.error || "Failed to fetch player stats");
       }
 
-      const { gameStats } = await statsResponse.json();
-      console.log("Game stats:", gameStats);
+      const analysis = await statsResponse.json();
+      setAnalysisResult(analysis);
+      console.log("Analysis result:", analysis);
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -133,8 +138,6 @@ export default function Home() {
                 {queryBreakdown.statistic && (
                   <span className="px-4 py-2 bg-green-100 dark:bg-green-900 rounded-full text-sm font-medium">
                     Stat: {queryBreakdown.statistic.category}
-                    {queryBreakdown.statistic.subcategory &&
-                      ` (${queryBreakdown.statistic.subcategory})`}
                   </span>
                 )}
                 {queryBreakdown.condition && (
@@ -143,14 +146,32 @@ export default function Home() {
                     {queryBreakdown.condition.threshold}
                   </span>
                 )}
-                {queryBreakdown.aggregation && (
-                  <span className="px-4 py-2 bg-orange-100 dark:bg-orange-900 rounded-full text-sm font-medium">
-                    {queryBreakdown.aggregation.type}
-                  </span>
-                )}
               </div>
             )}
           </div>
+
+          {/* Analysis Results Section */}
+          {analysisResult && (
+            <div className="mt-8 p-6 border border-gray-200 dark:border-gray-800 rounded-lg">
+              <h2 className="text-lg font-semibold mb-4">Analysis Results</h2>
+              <p className="mb-4">{analysisResult.summary}</p>
+
+              {/* You can map through analysisResult.details here to show the game details */}
+              <div className="space-y-2">
+                {analysisResult.details.map((game) => (
+                  <div
+                    key={game.gameId}
+                    className="p-2 bg-gray-50 dark:bg-gray-900 rounded"
+                  >
+                    <p>Points: {game.playerStats.points}</p>
+                    <p>Rebounds: {game.playerStats.rebounds}</p>
+                    <p>Assists: {game.playerStats.assists}</p>
+                    <p>Three Pointers: {game.playerStats.threePointers}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </main>
     </div>

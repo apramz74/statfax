@@ -10,7 +10,7 @@ export interface QueryComponents {
   };
   condition?: {
     operator: string;
-    value: number;
+    threshold: number;
   };
 }
 
@@ -48,4 +48,9 @@ export interface NBAApiGameResponse {
     assists: number;
     tpm: number;
   }>;
+}
+
+export interface AnalysisResult {
+  summary: string;
+  details: GameStats[];
 }
