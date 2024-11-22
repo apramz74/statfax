@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { QueryComponents, AnalysisResult } from "@/app/types/index";
 import { LoadingSpinner } from "./components/LoadingSpinner";
+import DetailsTable from "./components/DetailsTable";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -156,20 +157,32 @@ export default function Home() {
               <h2 className="text-lg font-semibold mb-4">Analysis Results</h2>
               <p className="mb-4">{analysisResult.summary}</p>
 
-              {/* You can map through analysisResult.details here to show the game details */}
-              <div className="space-y-2">
-                {analysisResult.details.map((game) => (
-                  <div
-                    key={game.gameId}
-                    className="p-2 bg-gray-50 dark:bg-gray-900 rounded"
-                  >
-                    <p>Points: {game.playerStats.points}</p>
-                    <p>Rebounds: {game.playerStats.rebounds}</p>
-                    <p>Assists: {game.playerStats.assists}</p>
-                    <p>Three Pointers: {game.playerStats.threePointers}</p>
-                  </div>
-                ))}
-              </div>
+              <DetailsTable
+                headers={[
+                  "Date",
+                  "Opponent",
+                  "PTS",
+                  "REB",
+                  "AST",
+                  "3PT",
+                  "BLK",
+                  "STL",
+                ]}
+                rows={analysisResult.details.map((game) => ({
+                  Date: new Date(game.date).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                  }),
+                  Opponent: game.homeTeam,
+                  PTS: game.playerStats.points,
+                  REB: game.playerStats.rebounds,
+                  AST: game.playerStats.assists,
+                  "3PT": game.playerStats.threePointers,
+                  BLK: game.playerStats.blocks,
+                  STL: game.playerStats.steals,
+                }))}
+              />
             </div>
           )}
         </div>

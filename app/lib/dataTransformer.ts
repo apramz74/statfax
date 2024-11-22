@@ -15,11 +15,12 @@ interface QueryResult {
 interface GameStatsRow {
   date: string;
   opponent: string;
-  points: number;
-  rebounds: number;
-  assists: number;
-  threePointers: number;
-  // other relevant stats
+  PTS: number;
+  REB: number;
+  AST: number;
+  "3PT": number;
+  BLK: number;
+  STL: number;
 }
 
 export class DataTransformer {
@@ -32,16 +33,25 @@ export class DataTransformer {
 
     // Transform matching games into table rows
     const rows = analysis.matches.map((game) => ({
-      date: new Date(game.date).toLocaleDateString(),
+      date: new Date(game.date).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }),
       opponent:
         game.homeTeam === query.player?.team ? game.awayTeam : game.homeTeam,
-      ...game.playerStats,
+      PTS: game.playerStats.points,
+      REB: game.playerStats.rebounds,
+      AST: game.playerStats.assists,
+      "3PT": game.playerStats.threePointers,
+      BLK: game.playerStats.blocks,
+      STL: game.playerStats.steals,
     }));
 
     return {
       summary: analysis.summary,
       details: {
-        headers: ["Date", "Opponent", "Points", "Rebounds", "Assists", "3PM"],
+        headers: ["Date", "Opponent", "PTS", "REB", "AST", "3PT", "BLK", "STL"],
         rows,
       },
     };

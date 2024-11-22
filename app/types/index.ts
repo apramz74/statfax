@@ -22,11 +22,17 @@ export interface PlayerStats {
 }
 
 export interface GameStats {
-  gameId: string;
   date: string;
   homeTeam: string;
   awayTeam: string;
-  playerStats: PlayerStats;
+  playerStats: {
+    points: number;
+    rebounds: number;
+    assists: number;
+    threePointers: number;
+    blocks: number;
+    steals: number;
+  };
 }
 
 export interface QueryParams {
