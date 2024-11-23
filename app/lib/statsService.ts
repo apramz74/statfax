@@ -80,6 +80,10 @@ export class StatsService {
         return playerStats.assists;
       case "three pointers":
         return playerStats.threePointers;
+      case "blocks":
+        return playerStats.blocks;
+      case "steals":
+        return playerStats.steals;
       default:
         throw new Error(`Unsupported statistic category: ${category}`);
     }
@@ -166,6 +170,8 @@ export class StatsService {
           totReb: number;
           assists: number;
           tpm: number; // three pointers made
+          blocks: number; // Added blocks
+          steals: number; // Added steals
           min: string;
         }>;
       }>(endpoint);
@@ -182,6 +188,8 @@ export class StatsService {
           rebounds: game.totReb,
           assists: game.assists,
           threePointers: game.tpm,
+          blocks: game.blocks, // Added blocks
+          steals: game.steals, // Added steals
         },
       }));
     } catch (error) {
