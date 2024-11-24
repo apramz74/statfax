@@ -1,11 +1,9 @@
 import { QueryAnalyzer } from "./queryAnalyzer";
-import { QueryComponents } from "../types";
+import { QueryComponents } from "@/app/types/index";
+import { GameStats } from "@/app/types/index";
 
 interface QueryResult {
-  summary: {
-    value: number | string;
-    description: string;
-  };
+  summary: string;
   details: {
     headers: string[];
     rows: GameStatsRow[];
@@ -29,10 +27,10 @@ export class DataTransformer {
     query: QueryComponents
   ): QueryResult {
     // Analyze the data according to query
-    const analysis = QueryAnalyzer.analyzeGames(rawData, query);
-
+    const analyzer = new QueryAnalyzer();
+    const analysis = analyzer.analyze(rawData, query);
     // Transform matching games into table rows
-    const rows = analysis.matches.map((game) => ({
+    const rows = analysis.details.map((game: GameStats) => ({
       date: new Date(game.date).toLocaleDateString("en-US", {
         year: "numeric",
         month: "2-digit",
@@ -55,12 +53,5 @@ export class DataTransformer {
         rows,
       },
     };
-  }
-
-  static transformSeasonStats(
-    rawData: SeasonStats,
-    queryType: string
-  ): QueryResult {
-    // Transform season statistics
   }
 }

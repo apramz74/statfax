@@ -1,6 +1,7 @@
 export interface QueryComponents {
   player?: {
     name: string;
+    team: string;
   };
   statistic?: {
     category: string;
