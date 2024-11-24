@@ -5,7 +5,13 @@ import {
   QueryParams,
   PlayerStats,
 } from "@/app/types/index";
-import { PlayerNotFoundError } from "@/app/lib/nbaApi";
+import { PlayerNotFoundError, APIRateLimitError } from "@/app/lib/nbaApi";
+
+interface GameDetail {
+  date: string;
+  homeTeam: string;
+  awayTeam: string;
+}
 
 export class StatsService {
   //Defines a private variable that contains the API client
@@ -169,33 +175,109 @@ export class StatsService {
           points: number;
           totReb: number;
           assists: number;
-          tpm: number; // three pointers made
-          blocks: number; // Added blocks
-          steals: number; // Added steals
+          tpm: number;
+          blocks: number;
+          steals: number;
           min: string;
         }>;
       }>(endpoint);
 
       console.log("Got player stats response");
 
+      // Collect all game IDs
+      const gameIds = data.response.map((game) => game.game.id);
+
+      // Get game details in batches
+      const gameDetails = await this.fetchGameDetailsInBatches(gameIds);
+
+      // Merge stats with game details
       return data.response.map((game) => ({
         gameId: game.game.id,
-        date: "", // We'll need a separate call to get game details if we need the date
-        homeTeam: "", // Same for team details
-        awayTeam: "", // Same for team details
+        date: gameDetails[game.game.id]?.date || "",
+        homeTeam: gameDetails[game.game.id]?.homeTeam || "",
+        awayTeam: gameDetails[game.game.id]?.awayTeam || "",
         playerStats: {
           points: game.points,
           rebounds: game.totReb,
           assists: game.assists,
           threePointers: game.tpm,
-          blocks: game.blocks, // Added blocks
-          steals: game.steals, // Added steals
+          blocks: game.blocks,
+          steals: game.steals,
         },
       }));
     } catch (error) {
       console.error("Error getting player game stats:", error);
       throw error;
     }
+  }
+
+  private async fetchGameDetailsInBatches(
+    gameIds: string[]
+  ): Promise<Record<string, GameDetail>> {
+    const BATCH_SIZE = 3;
+    const gameDetails: Record<string, GameDetail> = {};
+    const DELAY_BETWEEN_REQUESTS = 6000;
+    const DELAY_BETWEEN_BATCHES = 12000;
+    const RATE_LIMIT_DELAY = 60000;
+
+    // Split gameIds into batches
+    for (let i = 0; i < gameIds.length; i += BATCH_SIZE) {
+      const batch = gameIds.slice(i, i + BATCH_SIZE);
+
+      console.log(
+        `Processing batch ${i / BATCH_SIZE + 1} of ${Math.ceil(
+          gameIds.length / BATCH_SIZE
+        )}`
+      );
+
+      // Process games sequentially within batch
+      for (const gameId of batch) {
+        try {
+          const result = await this.apiClient.get<{
+            response: Array<{
+              date: { start: string };
+              teams: {
+                home: { name: string };
+                visitors: { name: string };
+              };
+            }>;
+          }>(`/games?id=${gameId}`);
+
+          const game = result.response[0];
+          if (game) {
+            gameDetails[gameId] = {
+              date: new Date(game.date.start).toISOString(),
+              homeTeam: game.teams.home.name,
+              awayTeam: game.teams.visitors.name,
+            };
+          }
+
+          // Wait between individual requests
+          await new Promise((resolve) =>
+            setTimeout(resolve, DELAY_BETWEEN_REQUESTS)
+          );
+        } catch (error) {
+          if (error instanceof APIRateLimitError) {
+            console.log("Rate limit hit, pausing for 1 minute...");
+            await new Promise((resolve) =>
+              setTimeout(resolve, RATE_LIMIT_DELAY)
+            );
+            i -= BATCH_SIZE; // Retry this batch
+            break; // Exit the inner loop to retry the whole batch
+          }
+          console.error(`Error processing game ${gameId}:`, error);
+        }
+      }
+
+      // Add longer delay between batches
+      if (i + BATCH_SIZE < gameIds.length) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, DELAY_BETWEEN_BATCHES)
+        );
+      }
+    }
+
+    return gameDetails;
   }
 
   private buildQueryParams(query: QueryComponents): QueryParams {
