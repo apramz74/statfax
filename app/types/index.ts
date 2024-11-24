@@ -19,6 +19,8 @@ export interface PlayerStats {
   rebounds: number;
   assists: number;
   threePointers: number;
+  blocks: number;
+  steals: number;
 }
 
 export interface GameStats {
